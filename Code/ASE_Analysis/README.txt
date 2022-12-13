@@ -4,11 +4,11 @@ Assuming you've done the ASEReadCounter
     for ASE score calculations, analyses and visualizations with the following scripts:
 
 There are a few options here:
-    You want to see what we specifically did to out dataset? --> Paper_Procedure
+    You want to see what we specifically did to out dataset? --> ASE_Analysis.R
     You don't have genotype data? --> ASE_NoGeno.R
     You don't have prior genes of interest? --> ASE_NoTop.R
     You don't have groups to compare? --> ASE_NoGroup.R
-    You do have all of that? --> Paper_Procedure as well!
+    You do have all of that? --> ASE_Analysis.R as well!
 
 All of these take the output from ASEReadCounter_OutputProcessing and analyse and visualize data!
 
