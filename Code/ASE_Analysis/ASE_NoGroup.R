@@ -238,32 +238,34 @@ if (geno == TRUE) {
   homtest$ZYG[homtest$ZYG==1] <- "Homozygote"
   homtest$ZYG[homtest$ZYG==0] <- "Heterozygote"
   
-  # Density plot for ASE values in all genes
-  tiff("ASE_Density.tif", res = 300, width = 12, height = 9, units = "cm")
-  ggplot(homtest, aes(x = ASE)) +
-    geom_density(aes(color = ZYG, fill = ZYG, y=..scaled..),
-                 size = 0.8, alpha = 0.2) +
-    labs(y = "Density", x = "ASE") +
-    scale_color_lancet(name = "Zygosity") +
-    scale_fill_lancet(name = "Zygosity") +
-    scale_x_continuous(expand = c(0,0)) +
-    scale_y_continuous(expand = c(0,0)) +
-    coord_fixed(ratio = 0.5) +
-    theme(
-      legend.position = "right",
-      legend.title = element_text(size = 12),
-      legend.text = element_text(size = 10),
-      axis.line = element_line(colour = "black", size = 1),
-      panel.grid.major.y = element_line(colour = "grey", size = 0.5),
-      panel.background = element_rect(fill = "white"),
-      title = element_text(face = "bold", size = 14),
-      axis.text.x = element_text(size = 10, margin = margin(l=0,r=0,t=10,b=0)),
-      axis.text.y = element_text(size = 10, margin = margin(l=0,r=10,t=0,b=0)),
-      axis.title.x = element_text(size = 12, margin = margin(l=0,r=0,t=10,b=0)),
-      axis.title.y = element_text(size = 12, margin = margin(l=0,r=10,t=0,b=0)),
-      axis.ticks = element_blank(), 
-    )
-  dev.off()
+# Density plot for ASE values in all genes
+density <- ggplot(homtest, aes(x = ASE)) + 
+  geom_density(aes(color = ZYG, fill = ZYG, y=..scaled..),
+               size = 0.8, alpha = 0.2) +
+  labs(y = "Density", x = "ASE") +
+  scale_color_lancet(name = "Zygosity") +
+  scale_fill_lancet(name = "Zygosity") +
+  scale_x_continuous(expand = c(0,0)) +
+  scale_y_continuous(expand = c(0,0)) +
+  theme_minimal() +
+  theme(
+    legend.position = "right",
+    legend.title = element_text(size = 8),
+    legend.text = element_text(size = 8),
+    axis.line = element_line(colour = "black", size = 1),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    title = element_text(face = "bold"),
+    axis.text.x = element_text(size = 8, margin = margin(l=0,r=0,t=10,b=0)),
+    axis.text.y = element_text(size = 8, margin = margin(l=0,r=10,t=0,b=0)),
+    axis.title.x = element_text(size = 10, margin = margin(l=0,r=0,t=10,b=0)),
+    axis.title.y = element_text(size = 10, margin = margin(l=0,r=10,t=0,b=0)),
+    axis.ticks = element_blank(), 
+  )
+tiff("ASE_Density.tif", res = 300, width = 12, height = 9, units = "cm")
+print(density)
+dev.off()
   # Remove homozygote samples (based on genotyping data)
   absData.sel[wesHetData.sel=="altHom" | wesHetData.sel=="refHom"] <- NA
   
