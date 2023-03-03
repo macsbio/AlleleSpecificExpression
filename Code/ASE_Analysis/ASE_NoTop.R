@@ -260,8 +260,8 @@ if (geno == TRUE) {
   
   # Density plot for ASE values in all genes
 density <- ggplot(homtest, aes(x = ASE)) + 
-  geom_density(aes(color = ZYG, fill = ZYG, y=..scaled..),
-               size = 0.8, alpha = 0.2) +
+  geom_density(aes(color = ZYG, fill = ZYG, y=after_stat(scaled)),
+               linewidth = 0.8, alpha = 0.2) +
   labs(y = "Density", x = "ASE") +
   scale_color_lancet(name = "Zygosity") +
   scale_fill_lancet(name = "Zygosity") +
@@ -272,7 +272,7 @@ density <- ggplot(homtest, aes(x = ASE)) +
     legend.position = "right",
     legend.title = element_text(size = 8),
     legend.text = element_text(size = 8),
-    axis.line = element_line(colour = "black", size = 1),
+    axis.line = element_line(colour = "black", linewidth = 1),
     panel.grid.major.x = element_blank(),
     panel.grid.minor.x = element_blank(),
     panel.grid.minor.y = element_blank(),
@@ -410,7 +410,7 @@ absScores <- full_join(absScores,snp2geneData)
 
 # Density plot for ASE values in all genes
 densitytotal <- ggplot(absScores, aes(x = ASE)) +
-  geom_density(size = 0.8, alpha = 0.2) +
+  geom_density(linewidth = 0.8, alpha = 0.2) +
   labs(y = "Density", x = "ASE") +
   scale_x_continuous(expand = c(0,0)) +
   scale_y_continuous(expand = c(0,0)) +
@@ -418,7 +418,7 @@ densitytotal <- ggplot(absScores, aes(x = ASE)) +
     legend.position = "right",
     legend.title = element_text(size = 8),
     legend.text = element_text(size = 8),
-    axis.line = element_line(colour = "black", size = 1),
+    axis.line = element_line(colour = "black", linewidth = 1),
     panel.grid.major.y = element_blank(),
     panel.background = element_rect(fill = "white"),
     title = element_text(face = "bold"),
@@ -464,7 +464,7 @@ qqplot <- ggplot(snps2genesP, aes(sample = logp)) +
     legend.position = "right",
     legend.title = element_text(size = 8),
     legend.text = element_text(size = 8),
-    axis.line = element_line(colour = "black", size = 1),
+    axis.line = element_line(colour = "black", linewidth = 1),
     panel.grid.major.y = element_blank(),
     panel.background = element_rect(fill = "white"),
     title = element_text(face = "bold"),
@@ -1031,7 +1031,7 @@ boxplotplot <- ggplot(boxplotAcross, aes(x = Group, y = ASE, fill = Group)) +
     legend.key = element_rect(fill = "transparent"),
     legend.title = element_text(size = 8),
     legend.text = element_text(size = 8),
-    axis.line = element_line(colour = "black", size = 1),
+    axis.line = element_line(colour = "black", linewidth = 1),
     panel.grid.major.y = element_blank(),
     panel.background = element_rect(fill = "white"),
     title = element_text(face = "bold"),
@@ -1098,7 +1098,7 @@ for (clinVar in paste("Group_", c(2,3,4,3,4,4),
       legend.key = element_rect(fill = "transparent"),
       legend.title = element_text(size = 8),
       legend.text = element_text(size = 8),
-      axis.line = element_line(colour = "black", size = 1),
+      axis.line = element_line(colour = "black", linewidth = 1),
       panel.grid.major.y = element_blank(),
       panel.background = element_rect(fill = "white"),
       title = element_text(face = "bold"),
