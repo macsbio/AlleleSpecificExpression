@@ -235,8 +235,8 @@ homtest$ZYG[homtest$ZYG==0] <- "Heterozygote"
 
 # Density plot for ASE values in all genes
 density <- ggplot(homtest, aes(x = ASE)) + 
-  geom_density(aes(color = ZYG, fill = ZYG, y=..scaled..),
-               size = 0.8, alpha = 0.2) +
+  geom_density(aes(color = ZYG, fill = ZYG, y=after_stat(scaled)),
+               linewidth = 0.8, alpha = 0.2) +
   labs(y = "Density", x = "ASE") +
   scale_color_lancet(name = "Zygosity") +
   scale_fill_lancet(name = "Zygosity") +
@@ -247,7 +247,7 @@ density <- ggplot(homtest, aes(x = ASE)) +
     legend.position = "right",
     legend.title = element_text(size = 8),
     legend.text = element_text(size = 8),
-    axis.line = element_line(colour = "black", size = 1),
+    axis.line = element_line(colour = "black", linewidth = 1),
     panel.grid.major.x = element_blank(),
     panel.grid.minor.x = element_blank(),
     panel.grid.minor.y = element_blank(),
@@ -389,7 +389,7 @@ absScores <- full_join(absScores,snp2geneData)
 
 # Density plot for ASE values in all genes
 densitytotal <- ggplot(absScores, aes(x = ASE)) +
-  geom_density(size = 0.8, alpha = 0.2) +
+  geom_density(linewidth = 0.8, alpha = 0.2) +
   labs(y = "Density", x = "ASE") +
   scale_x_continuous(expand = c(0,0)) +
   scale_y_continuous(expand = c(0,0)) +
@@ -397,7 +397,7 @@ densitytotal <- ggplot(absScores, aes(x = ASE)) +
     legend.position = "right",
     legend.title = element_text(size = 8),
     legend.text = element_text(size = 8),
-    axis.line = element_line(colour = "black", size = 1),
+    axis.line = element_line(colour = "black", linewidth = 1),
     panel.grid.major.y = element_blank(),
     panel.background = element_rect(fill = "white"),
     title = element_text(face = "bold"),
@@ -454,7 +454,7 @@ if (geno == TRUE) {
       legend.position = "right",
       legend.title = element_text(size = 8),
       legend.text = element_text(size = 8),
-      axis.line = element_line(colour = "black", size = 1),
+      axis.line = element_line(colour = "black", linewidth = 1),
       panel.grid.major.y = element_blank(),
       panel.background = element_rect(fill = "white"),
       title = element_text(face = "bold"),
@@ -501,7 +501,7 @@ if (geno == TRUE) {
         legend.position = "right",
         legend.title = element_text(size = 8),
         legend.text = element_text(size = 8),
-        axis.line = element_line(colour = "black", size = 1),
+        axis.line = element_line(colour = "black", linewidth = 1),
         panel.grid.major.y = element_blank(),
         panel.background = element_rect(fill = "white"),
         title = element_text(face = "bold"),
@@ -919,8 +919,8 @@ for (k in unique(na.omit(clinData$Group))) {
 # Function for differential ASE analysis BETWEEN 2 GROUPS
 diffAse <- function(asedata, clinicaldata, groupVar) {
   gvar <- data.frame(clinicaldata[, c("SID", groupVar)])
-  gvar2 <- gvar[match(colnames(data), gvar[, 1]),]
-  pVals <- apply(data, 1, function(x) {
+  gvar2 <- gvar[match(colnames(asedata), gvar[, 1]),]
+  pVals <- apply(asedata, 1, function(x) {
     testData <- split(as.vector(as.matrix(x)), gvar2[, groupVar])
     p <- NA
     try ({
@@ -930,15 +930,15 @@ diffAse <- function(asedata, clinicaldata, groupVar) {
     )
     return(p)
   })
-  names(pVals) <- rownames(data)
+  names(pVals) <- rownames(asedata)
   return(pVals)
 }
 
 # Create effect size data frame (effect is d(medians))
 diffAseEffect <- function(asedata, clinicaldata, groupVar) {
   gvar <- data.frame(clinicaldata[, c("SID", groupVar)])
-  gvar2 <- gvar[match(colnames(data), gvar[, 1]),]
-  eVals <- apply(data, 1, function(x) {
+  gvar2 <- gvar[match(colnames(asedata), gvar[, 1]),]
+  eVals <- apply(asedata, 1, function(x) {
     testData <- split(as.vector(as.matrix(x)), gvar2[, groupVar])
     e <- NA
     try ({
@@ -948,15 +948,15 @@ diffAseEffect <- function(asedata, clinicaldata, groupVar) {
     )
     return(e)
   })
-  names(eVals) <- rownames(data)
+  names(eVals) <- rownames(asedata)
   return(eVals)
 }
 
 # Function for differential ASE analysis ACROSS 3 OR MORE PHENOGROUPS
 diffAseAcross <- function(asedata, clinicaldata, groupVar) {
   gvar <- data.frame(clinicaldata[, c("SID", groupVar)])
-  gvar2 <- gvar[match(colnames(absData), gvar[, 1]),]
-  kwVals <- apply(data, 1, function(x) {
+  gvar2 <- gvar[match(colnames(asedata), gvar[, 1]),]
+  kwVals <- apply(asedata, 1, function(x) {
     testData <- split(as.vector(as.matrix(x)), gvar2[, groupVar])
     kw <- NA
     try ({
@@ -965,7 +965,7 @@ diffAseAcross <- function(asedata, clinicaldata, groupVar) {
     )
     return(kw)
   })
-  names(kwVals) <- rownames(data)
+  names(kwVals) <- rownames(asedata)
   return(kwVals)
 }
 
@@ -1059,7 +1059,7 @@ boxplotplot <- ggplot(boxplotAcross, aes(x = Group, y = ASE, fill = Group)) +
     legend.key = element_rect(fill = "transparent"),
     legend.title = element_text(size = 8),
     legend.text = element_text(size = 8),
-    axis.line = element_line(colour = "black", size = 1),
+    axis.line = element_line(colour = "black", linewidth = 1),
     panel.grid.major.y = element_blank(),
     panel.background = element_rect(fill = "white"),
     title = element_text(face = "bold", size = 10),
@@ -1133,7 +1133,7 @@ for (set in 1:ncol(combinations)) {
       legend.key = element_rect(fill = "transparent"),
       legend.title = element_text(size = 8),
       legend.text = element_text(size = 8),
-      axis.line = element_line(colour = "black", size = 1),
+      axis.line = element_line(colour = "black", linewidth = 1),
       panel.grid.major.y = element_blank(),
       panel.background = element_rect(fill = "white"),
       title = element_text(face = "bold"),
