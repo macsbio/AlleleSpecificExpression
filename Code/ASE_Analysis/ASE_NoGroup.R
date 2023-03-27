@@ -69,6 +69,9 @@ if(!require(reshape2)){
 if(!require(readxl)){
   install.packages("readxl")
   library(readxl)}
+if(!require(writexl)){
+  install.packages("writexl")
+  library(writexl)}
 if(!require(pROC)){
   install.packages("pROC")
   library(pROC)}
