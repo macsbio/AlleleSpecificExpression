@@ -69,9 +69,6 @@ if(!require(reshape2)){
 if(!require(readxl)){
   install.packages("readxl")
   library(readxl)}
-if(!require(writexl)){
-  install.packages("writexl")
-  library(writexl)}
 if(!require(pROC)){
   install.packages("pROC")
   library(pROC)}
@@ -168,6 +165,8 @@ colnames(refRatioData) <- colnames(altCountData)
 #                                                                 per allele
 #-----------------------------------------------------------------------------#
 if (geno == TRUE) {
+  # Not necessary: remove data dat is not needed anymore
+  rm(list=setdiff(ls(), c("absData", "annData","absData1", "dosageData","DATA.DIR","RES.DIR","totalCountData", "genes_of_interest")))
   load('wesHetDataWES_HG38HG19.RData')
   colnames(wesHetData)[-1] <- gsub("\\.hg19", "", colnames(wesHetData)[-1])
   
@@ -225,14 +224,6 @@ if (geno == TRUE) {
   homtesthom <- homtest[homtest$ZYG==1,]
   homtesthet <- homtest[homtest$ZYG==0,]
   
-  for (i in 1:100) {
-    homtesthomCurr <- homtesthom[sample(nrow(homtesthom), size = 167329),]
-    homtestCurr <- rbind(homtesthomCurr,homtesthet)
-    roc1Curr <- roc(homtestCurr$ZYG,homtestCurr$ASE,plot=T)
-    threshTest[[i]] <- coords(roc1Curr, x="best", ret="threshold", 
-                              best.method="youden")
-  }
-  
   roc1 <- roc(homtest$ZYG,homtest$ASE,plot=T)
   thresh <- as.numeric(coords(roc1, x="best", ret="threshold", 
                               best.method="youden"))
@@ -241,34 +232,32 @@ if (geno == TRUE) {
   homtest$ZYG[homtest$ZYG==1] <- "Homozygote"
   homtest$ZYG[homtest$ZYG==0] <- "Heterozygote"
   
-# Density plot for ASE values in all genes
-density <- ggplot(homtest, aes(x = ASE)) + 
-  geom_density(aes(color = ZYG, fill = ZYG, y=after_stat(scaled)),
-               linewidth = 0.8, alpha = 0.2) +
-  labs(y = "Density", x = "ASE") +
-  scale_color_lancet(name = "Zygosity") +
-  scale_fill_lancet(name = "Zygosity") +
-  scale_x_continuous(expand = c(0,0)) +
-  scale_y_continuous(expand = c(0,0)) +
-  theme_minimal() +
-  theme(
-    legend.position = "right",
-    legend.title = element_text(size = 8),
-    legend.text = element_text(size = 8),
-    axis.line = element_line(colour = "black", linewidth = 1),
-    panel.grid.major.x = element_blank(),
-    panel.grid.minor.x = element_blank(),
-    panel.grid.minor.y = element_blank(),
-    title = element_text(face = "bold"),
-    axis.text.x = element_text(size = 8, margin = margin(l=0,r=0,t=10,b=0)),
-    axis.text.y = element_text(size = 8, margin = margin(l=0,r=10,t=0,b=0)),
-    axis.title.x = element_text(size = 10, margin = margin(l=0,r=0,t=10,b=0)),
-    axis.title.y = element_text(size = 10, margin = margin(l=0,r=10,t=0,b=0)),
-    axis.ticks = element_blank(), 
-  )
-tiff("ASE_Density.tif", res = 300, width = 12, height = 9, units = "cm")
-print(density)
-dev.off()
+  # Density plot for ASE values in all genes
+  tiff("ASE_Density.tif", res = 300, width = 12, height = 9, units = "cm")
+  ggplot(homtest, aes(x = ASE)) +
+    geom_density(aes(color = ZYG, fill = ZYG, y=..scaled..),
+                 size = 0.8, alpha = 0.2) +
+    labs(y = "Density", x = "ASE") +
+    scale_color_lancet(name = "Zygosity") +
+    scale_fill_lancet(name = "Zygosity") +
+    scale_x_continuous(expand = c(0,0)) +
+    scale_y_continuous(expand = c(0,0)) +
+    coord_fixed(ratio = 0.5) +
+    theme(
+      legend.position = "right",
+      legend.title = element_text(size = 12),
+      legend.text = element_text(size = 10),
+      axis.line = element_line(colour = "black", size = 1),
+      panel.grid.major.y = element_line(colour = "grey", size = 0.5),
+      panel.background = element_rect(fill = "white"),
+      title = element_text(face = "bold", size = 14),
+      axis.text.x = element_text(size = 10, margin = margin(l=0,r=0,t=10,b=0)),
+      axis.text.y = element_text(size = 10, margin = margin(l=0,r=10,t=0,b=0)),
+      axis.title.x = element_text(size = 12, margin = margin(l=0,r=0,t=10,b=0)),
+      axis.title.y = element_text(size = 12, margin = margin(l=0,r=10,t=0,b=0)),
+      axis.ticks = element_blank(), 
+    )
+  dev.off()
   # Remove homozygote samples (based on genotyping data)
   absData.sel[wesHetData.sel=="altHom" | wesHetData.sel=="refHom"] <- NA
   
@@ -391,7 +380,7 @@ absScores <- full_join(absScores,snp2geneData)
 # Density plot for ASE values in all genes
 tiff("ASE_Density_Total.tif", res = 300, width = 85, height = 85, units = "mm")
 ggplot(absScores, aes(x = ASE)) +
-  geom_density(linewidth = 0.8, alpha = 0.2) +
+  geom_density(size = 0.8, alpha = 0.2) +
   labs(y = "Density", x = "ASE") +
   scale_x_continuous(expand = c(0,0)) +
   scale_y_continuous(expand = c(0,0)) +
@@ -400,7 +389,7 @@ ggplot(absScores, aes(x = ASE)) +
     legend.position = "right",
     legend.title = element_text(size = 8),
     legend.text = element_text(size = 8),
-    axis.line = element_line(colour = "black", linewidth = 1),
+    axis.line = element_line(colour = "black", size = 1),
     panel.grid.major.y = element_blank(),
     panel.background = element_rect(fill = "white"),
     title = element_text(face = "bold"),
@@ -443,18 +432,18 @@ snps2genesP$logp <- (-log10(snps2genesP$pvalue))
 setwd(RES.DIR)
 
 # Make the plot
-qqplot <- ggplot(snps2genesP, aes(sample = logp)) +
+tiff("QQ_plot_logp_SNP_new.tif", res = 300, width = 175, height = 85, units = "mm")
+ggplot(snps2genesP, aes(sample = logp)) +
   geom_qq(aes(color = top),shape = 1, size = 0.5, distribution = qchisq, dparams = list(df = 1)) +
   scale_color_brewer(name = "Gene status", palette = "Dark2") +
   xlab("Expected -log10(pvalue)") +
   ylab("Observed -log10(pvalue)") +
   geom_abline(intercept = 0, slope = 1, alpha = 0.5) +
-  guides(color = guide_legend(override.aes = list(size = 2))) +
   theme(
     legend.position = "right",
     legend.title = element_text(size = 8),
     legend.text = element_text(size = 8),
-    axis.line = element_line(colour = "black", linewidth = 1),
+    axis.line = element_line(colour = "black", size = 1),
     panel.grid.major.y = element_blank(),
     panel.background = element_rect(fill = "white"),
     title = element_text(face = "bold"),
@@ -464,8 +453,6 @@ qqplot <- ggplot(snps2genesP, aes(sample = logp)) +
     axis.title.y = element_text(size = 10, margin = margin(l=0,r=10,t=0,b=0)),
     axis.ticks = element_blank(),
   )
-tiff("QQ_plot_logp_SNP.tif", res = 300, width = 175, height = 85, units = "mm")
-print(qqplot)
 dev.off()
 
 # Link all q-values to ENSGID for later analyses
@@ -525,16 +512,15 @@ aseManhattan <- function(input,
     manhattanplot <- ggplot(input, aes(x = BPcum, y = -log10(qvalue), 
                                        colour = as.factor(chromosome))) +
       geom_point() +
-      geom_point(data = ~head(input[order(input$qvalue),],5), aes(x = BPcum, y = -log10(qvalue)), 
-                 color = "#D95F02") +
-      geom_hline(yintercept = -log10(sig), color = "grey40", linetype = "dashed") + 
+      geom_hline(yintercept = -log10(sig), color = "grey40", linetype = "dashed",
+      ) + 
       geom_text_repel(aes(label=hgnc_symbol), size = 2,
                       data = (slice_min(input, n = 20, qvalue))) +
       scale_x_continuous(expand = c(0.05,0.05), 
                          breaks = axis.set$center, labels = axis.set$chromosome,
                          guide = guide_axis(check.overlap = TRUE)) +
       scale_y_continuous(expand = c(0,0), limits = c(0,ylim)) +
-      scale_color_manual(values = rep(c("#276EBF", "#183059"), 23)) + 
+      scale_color_manual(values = rep(c("#001C3D", "#007BC7"), 23)) + 
       labs(x = "Chromosome", y = "-log10(q)") +
       theme_minimal() + 
       theme( 
@@ -578,16 +564,15 @@ aseManhattan <- function(input,
     manhattanplot <- ggplot(input, aes(x = BPcum, y = -log10(pvalue), 
                                        colour = as.factor(chromosome))) +
       geom_point() +
-      geom_point(data = ~head(input[order(input$pvalue),],5), aes(x = BPcum, y = -log10(pvalue)), 
-                 color = "#D95F02") +
-      geom_hline(yintercept = -log10(sig), color = "grey40", linetype = "dashed") + 
+      geom_hline(yintercept = -log10(sig), color = "grey40", linetype = "dashed",
+      ) + 
       geom_text_repel(aes(label=hgnc_symbol), size = 2,
                       data = (slice_min(input, n = 20, pvalue))) +
       scale_x_continuous(expand = c(0.05,0.05), 
                          breaks = axis.set$center, labels = axis.set$chromosome,
                          guide = guide_axis(check.overlap = TRUE)) +
       scale_y_continuous(expand = c(0,0), limits = c(0,ylim)) +
-      scale_color_manual(values = rep(c("#276EBF", "#183059"), 23)) + 
+      scale_color_manual(values = rep(c("#001C3D", "#007BC7"), 23)) + 
       labs(x = "Chromosome", y = "-log10(p)") +
       theme_minimal() +
       theme( 
@@ -643,7 +628,8 @@ AseGeneCounts <- as.data.frame(table(genesQsample[genesQsample$qvalue<0.05,"ense
 colnames(AseGeneCounts) <- c("ensembl_gene_id","Frequency")
 
 # Barplot gene frequencies across individuals
-genecounts <- ggplot(AseGeneCounts, aes(x = Frequency)) +
+tiff("Gene_counts_histogram.tif", res = 300, width = 85, height = 85, units = "mm")
+ggplot(AseGeneCounts, aes(x = Frequency)) +
   geom_bar(color = "#00468BFF", fill = "#00468BFF", alpha = 0.2) +
   scale_x_continuous(expand = c(0,0)) +
   scale_y_continuous(expand = c(0,0)) +
@@ -663,8 +649,6 @@ genecounts <- ggplot(AseGeneCounts, aes(x = Frequency)) +
     axis.title = element_text(face = "bold", size = 12),
     axis.ticks = element_blank(), 
   )
-tiff("Gene_counts_histogram.tif", res = 300, width = 85, height = 85, units = "mm")
-print(genecounts)
 dev.off()
 
 # Gene frequencies top DCM genes
@@ -681,6 +665,7 @@ AseGenes33perc <- as.character(AseGeneCounts[AseGeneCounts$Freq>=(ncol(absData)/
 # FUNCTION FOR TOPGO
 ase.topGO <- function(inputData, statvalue = "pvalue", filename, genelist = FALSE) {
   if (genelist == TRUE) {
+    goxl <- list()
     # Run the topGO analysis
     for (j in c("BP", "CC", "MF")) {			
       message(j)		
@@ -695,25 +680,15 @@ ase.topGO <- function(inputData, statvalue = "pvalue", filename, genelist = FALS
                     annot = annFUN.org,
                     mapping = "org.Hs.eg.db",
                     ID = "ensembl")
-      goRes <- runTest(GOdata, algorithm = "parentchild", statistic = "fisher") # recommended setting		
-      allRes <- GenTable(GOdata, Pvalue = goRes, 		
-                         topNodes = length(goRes@score),
-                         orderBy = "Pvalue", ranksOf = "Pvalue",
-                         numChar = 1E9)
-      if (all(as.numeric(allRes$Pvalue) >= 0.05)) {
-        allRes <- allRes[1, ]
-        allRes[, 1:6] <- NA
-      } else {
-        allRes <- allRes[1:max(which(as.numeric(allRes[,6]) < 0.05)), ] # leave only results with p < 0.05
+      goRes <- runTest(GOdata, algorithm = "parentchild", statistic = "fisher") # recommended setting
+      goxl[[j]] <- GenTable(GOdata, Pvalue = goRes, 		
+                     topNodes = length(goRes@score),
+                     orderBy = "Pvalue", ranksOf = "Pvalue",
+                     numChar = 1E9)
       }
-      write.xlsx(allRes,		
-                 file = filename, 
-                 sheet = ifelse(j == "BP", "BiologicalProcess", 
-                                ifelse(j == "CC", "CellularComponent", "MolecularFunction")),
-                 row.names = FALSE,
-                 append = TRUE)
-    }
+    write_xlsx(goxl, path = filename)
   } else {
+    goxl <- list()
     # Create a data frame of all IDs with corresponding lowest qvalues for each gene
     genesQsample <- inputData[,c(statvalue,"ensembl_gene_id")]
     
@@ -742,23 +717,12 @@ ase.topGO <- function(inputData, statvalue = "pvalue", filename, genelist = FALS
                     mapping = "org.Hs.eg.db",
                     ID = "ensembl")
       goRes <- runTest(GOdata, algorithm = "parentchild", statistic = "fisher") # recommended setting		
-      allRes <- GenTable(GOdata, Pvalue = goRes, 		
-                         topNodes = length(goRes@score),
-                         orderBy = "Pvalue", ranksOf = "Pvalue",
-                         numChar = 1E9)
-      if (all(as.numeric(allRes$Pvalue) >= 0.05)) {
-        allRes <- allRes[1, ]
-        allRes[, 1:6] <- NA
-      } else {
-        allRes <- allRes[1:max(which(as.numeric(allRes[,6]) < 0.05)), ] # leave only results with p < 0.05
-      }
-      write.xlsx(allRes,		
-                 file = filename, 
-                 sheet = ifelse(j == "BP", "BiologicalProcess", 
-                                ifelse(j == "CC", "CellularComponent", "MolecularFunction")),
-                 row.names = FALSE,
-                 append = TRUE)
+      goxl[[j]] <- GenTable(GOdata, Pvalue = goRes, 		
+                            topNodes = length(goRes@score),
+                            orderBy = "Pvalue", ranksOf = "Pvalue",
+                            numChar = 1E9)
     }
+    write_xlsx(goxl, path = filename)
   }
 }
 
