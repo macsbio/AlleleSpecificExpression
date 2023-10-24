@@ -2,7 +2,7 @@
 # DCM_MUMC_ASE_analysis.R                                                     #
 #                                                                             #
 # Version: 4.0                                                                #
-# Date:  Fall 2020 - Spring 2021                                              #
+# Date:  November 2022                                                        #
 # Author: Michiel Adriaens, PhD; MaCSBio, Maastricht University               #
 # Additional: Daan van Beek; MaCSBio                                          #
 # History:                                                                    #
@@ -35,13 +35,11 @@
 rm(list = ls(all.names = T))
 
 clinicalfile <- "Complete_Clinicaldataset_RNAseq_Genetics_20180801.xlsx"
-groups.col.name <- "Group"
 ASEReadCounterFile <- "ASEReadCounterOutput_Processed_DCM.RData"
 
 # If TRUE, provide a filename for the genotype data
 geno <- TRUE
 genotypedata <- "wesHetDataWES_HG38HG19.RData"
-
 
 # Load packages
 if(!require(rstudioapi)){
@@ -68,9 +66,6 @@ if(!require(reshape2)){
 if(!require(readxl)){
   install.packages("readxl")
   library(readxl)}
-if(!require(writexl)){
-  install.packages("writexl")
-  library(writexl)}
 if(!require(pROC)){
   install.packages("pROC")
   library(pROC)}
@@ -123,23 +118,6 @@ load(ASEReadCounterFile)
 # Load phenotypes
 clinData <- read_excel(clinicalfile,
                        sheet = "Clinical Data")
-
-# Add dummy variables for cluster comparisons to clinData (for ease of use)
-# This will be useful for the creation of folders and filenames and loops
-clusterComparisons <- c()
-for (i in 1:3) {
-  for (j in (i + 1):4) {
-    .t <- rep(NA, nrow(clinData))
-    .t[clinData$Group == as.character(i)] <- 0
-    .t[clinData$Group == as.character(j)] <- 1
-    clusterComparisons <- cbind(clusterComparisons, .t)
-  }
-} 
-colnames(clusterComparisons) <- paste("Group_", c(2,3,4,3,4,4),
-                                      "vs", c(1,1,1,2,2,3), sep = "")
-clinData <- cbind(clinData, clusterComparisons)
-clinData$SID <- as.character(clinData$SID)
-rm(clusterComparisons)
 
 # Check if all orders of columns and rows are equal across the dataframes
 all(dosageData[, 1] == altRatioData[, 1]) # TRUE
@@ -244,17 +222,8 @@ if (geno == TRUE) {
   threshTest <- list()
   homtesthom <- homtest[homtest$ZYG==1,]
   homtesthet <- homtest[homtest$ZYG==0,]
-  
-  for (i in 1:100) {
-    homtesthomCurr <- homtesthom[sample(nrow(homtesthom), size = 167329),]
-    homtestCurr <- rbind(homtesthomCurr,homtesthet)
-    roc1Curr <- roc(homtestCurr$ZYG,homtestCurr$ASE,plot=T)
-    threshTest[[i]] <- coords(roc1Curr, x="best", ret="threshold", 
-                              best.method="youden")
-  }
-  
-  roc1 <- roc(homtest$ZYG,homtest$ASE,plot=T)
-  thresh <- as.numeric(coords(roc1, x="best", ret="threshold", 
+  roc <- roc(homtest$ZYG,homtest$ASE,plot=T)
+  thresh <- as.numeric(coords(roc, x="best", ret="threshold", 
                               best.method="youden"))
   
   homtest$ZYG <- as.character(homtest$ZYG)
@@ -262,33 +231,32 @@ if (geno == TRUE) {
   homtest$ZYG[homtest$ZYG==0] <- "Heterozygote"
   
   # Density plot for ASE values in all genes
-density <- ggplot(homtest, aes(x = ASE)) + 
-  geom_density(aes(color = ZYG, fill = ZYG, y=after_stat(scaled)),
-               linewidth = 0.8, alpha = 0.2) +
-  labs(y = "Density", x = "ASE") +
-  scale_color_lancet(name = "Zygosity") +
-  scale_fill_lancet(name = "Zygosity") +
-  scale_x_continuous(expand = c(0,0)) +
-  scale_y_continuous(expand = c(0,0)) +
-  theme_minimal() +
-  theme(
-    legend.position = "right",
-    legend.title = element_text(size = 8),
-    legend.text = element_text(size = 8),
-    axis.line = element_line(colour = "black", linewidth = 1),
-    panel.grid.major.x = element_blank(),
-    panel.grid.minor.x = element_blank(),
-    panel.grid.minor.y = element_blank(),
-    title = element_text(face = "bold"),
-    axis.text.x = element_text(size = 8, margin = margin(l=0,r=0,t=10,b=0)),
-    axis.text.y = element_text(size = 8, margin = margin(l=0,r=10,t=0,b=0)),
-    axis.title.x = element_text(size = 10, margin = margin(l=0,r=0,t=10,b=0)),
-    axis.title.y = element_text(size = 10, margin = margin(l=0,r=10,t=0,b=0)),
-    axis.ticks = element_blank(), 
-  )
-tiff("ASE_Density.tif", res = 300, width = 12, height = 9, units = "cm")
-print(density)
-dev.off()
+  density <- ggplot(homtest, aes(x = ASE)) + 
+    geom_density(aes(color = ZYG, fill = ZYG, y=..scaled..),
+                 size = 0.8, alpha = 0.2) +
+    labs(y = "Density", x = "ASE") +
+    scale_color_lancet(name = "Zygosity") +
+    scale_fill_lancet(name = "Zygosity") +
+    scale_x_continuous(expand = c(0,0)) +
+    scale_y_continuous(expand = c(0,0)) +
+    theme(
+      legend.position = "right",
+      legend.title = element_text(size = 12),
+      legend.text = element_text(size = 10),
+      axis.line = element_line(colour = "black", size = 1),
+      panel.grid.major.y = element_line(colour = "grey", size = 0.5),
+      panel.background = element_rect(fill = "white"),
+      title = element_text(face = "bold", size = 14),
+      axis.text.x = element_text(size = 10, margin = margin(l=0,r=0,t=10,b=0)),
+      axis.text.y = element_text(size = 10, margin = margin(l=0,r=10,t=0,b=0)),
+      axis.title.x = element_text(size = 12, margin = margin(l=0,r=0,t=10,b=0)),
+      axis.title.y = element_text(size = 12, margin = margin(l=0,r=10,t=0,b=0)),
+      axis.ticks = element_blank(), 
+    )
+  tiff("ASE_Density.tif", res = 300, width = 12, height = 9, units = "cm")
+  print(density)
+  dev.off()
+  
   # Remove homozygote samples (based on genotyping data)
   absData.sel[wesHetData.sel=="altHom" | wesHetData.sel=="refHom"] <- NA
   
@@ -297,7 +265,7 @@ dev.off()
   absData[absData>thresh] <- NA
   absData1 <- absData
   absData[sharedSnps, commonSamples] <- absData.sel
-} else {
+  } else {
   altCountData <- (altRatioData * totalCountData)
   refCountData <- (refRatioData * totalCountData)
   absData[altCountData<10] <- NA
@@ -412,16 +380,18 @@ absScores <- na.omit(absScores)
 absScores <- full_join(absScores,snp2geneData)
 
 # Density plot for ASE values in all genes
-densitytotal <- ggplot(absScores, aes(x = ASE)) +
-  geom_density(linewidth = 0.8, alpha = 0.2) +
+tiff("ASE_Density_Total.tif", res = 300, width = 85, height = 85, units = "mm")
+ggplot(absScores, aes(x = ASE)) +
+  geom_density(size = 0.8, alpha = 0.2) +
   labs(y = "Density", x = "ASE") +
   scale_x_continuous(expand = c(0,0)) +
   scale_y_continuous(expand = c(0,0)) +
+  coord_fixed(ratio = 0.5) +
   theme(
     legend.position = "right",
     legend.title = element_text(size = 8),
     legend.text = element_text(size = 8),
-    axis.line = element_line(colour = "black", linewidth = 1),
+    axis.line = element_line(colour = "black", size = 1),
     panel.grid.major.y = element_blank(),
     panel.background = element_rect(fill = "white"),
     title = element_text(face = "bold"),
@@ -431,8 +401,6 @@ densitytotal <- ggplot(absScores, aes(x = ASE)) +
     axis.title.y = element_text(size = 10, margin = margin(l=0,r=10,t=0,b=0)),
     axis.ticks = element_blank(), 
   )
-tiff("ASE_Density_Total.tif", res = 300, width = 85, height = 85, units = "mm")
-print(densitytotal)
 dev.off()
 
 # CREAT QQ PLOT FOR ALL SNPs WITH THRESHOLD APPLIED ALSO TO WES SNPS
@@ -463,11 +431,9 @@ qqplot <- ggplot(snps2genesP, aes(sample = logp)) +
   xlab("Expected -log10(pvalue)") +
   ylab("Observed -log10(pvalue)") +
   geom_abline(intercept = 0, slope = 1, alpha = 0.5) +
-  theme(
-    legend.position = "right",
-    legend.title = element_text(size = 8),
-    legend.text = element_text(size = 8),
-    axis.line = element_line(colour = "black", linewidth = 1),
+  theme(        
+    legend.position = "none",
+    axis.line = element_line(colour = "black", size = 1),
     panel.grid.major.y = element_blank(),
     panel.background = element_rect(fill = "white"),
     title = element_text(face = "bold"),
@@ -479,6 +445,7 @@ qqplot <- ggplot(snps2genesP, aes(sample = logp)) +
   )
 tiff("QQ_plot_logp_SNP.tif", res = 300, width = 175, height = 85, units = "mm")
 print(qqplot)
+dev.off()
 
 # Link all q-values to ENSGID for later analyses
 aqm <- as.data.frame(aseQvalueMatrix)
@@ -537,16 +504,15 @@ aseManhattan <- function(input,
     manhattanplot <- ggplot(input, aes(x = BPcum, y = -log10(qvalue), 
                                        colour = as.factor(chromosome))) +
       geom_point() +
-      geom_point(data = ~head(input[order(input$qvalue),],5), aes(x = BPcum, y = -log10(qvalue)), 
-                 color = "#D95F02") +
-      geom_hline(yintercept = -log10(sig), color = "grey40", linetype = "dashed") + 
+      geom_hline(yintercept = -log10(sig), color = "grey40", linetype = "dashed",
+      ) + 
       geom_text_repel(aes(label=hgnc_symbol), size = 2,
                       data = (slice_min(input, n = 20, qvalue))) +
       scale_x_continuous(expand = c(0.05,0.05), 
                          breaks = axis.set$center, labels = axis.set$chromosome,
                          guide = guide_axis(check.overlap = TRUE)) +
       scale_y_continuous(expand = c(0,0), limits = c(0,ylim)) +
-      scale_color_manual(values = rep(c("#276EBF", "#183059"), 23)) + 
+      scale_color_manual(values = rep(c("#001C3D", "#007BC7"), 23)) + 
       labs(x = "Chromosome", y = "-log10(q)") +
       theme_minimal() + 
       theme( 
@@ -590,16 +556,15 @@ aseManhattan <- function(input,
     manhattanplot <- ggplot(input, aes(x = BPcum, y = -log10(pvalue), 
                                        colour = as.factor(chromosome))) +
       geom_point() +
-      geom_point(data = ~head(input[order(input$pvalue),],5), aes(x = BPcum, y = -log10(pvalue)), 
-                 color = "#D95F02") +
-      geom_hline(yintercept = -log10(sig), color = "grey40", linetype = "dashed") + 
+      geom_hline(yintercept = -log10(sig), color = "grey40", linetype = "dashed",
+      ) + 
       geom_text_repel(aes(label=hgnc_symbol), size = 2,
                       data = (slice_min(input, n = 20, pvalue))) +
       scale_x_continuous(expand = c(0.05,0.05), 
                          breaks = axis.set$center, labels = axis.set$chromosome,
                          guide = guide_axis(check.overlap = TRUE)) +
       scale_y_continuous(expand = c(0,0), limits = c(0,ylim)) +
-      scale_color_manual(values = rep(c("#276EBF", "#183059"), 23)) + 
+      scale_color_manual(values = rep(c("#001C3D", "#007BC7"), 23)) + 
       labs(x = "Chromosome", y = "-log10(p)") +
       theme_minimal() +
       theme( 
@@ -617,6 +582,7 @@ aseManhattan <- function(input,
     dev.off()
   }
 }
+
 # Make directory
 if(!dir.exists("Individual_Manhattan_plots")) {
   dir.create("Individual_Manhattan_plots")
@@ -654,7 +620,8 @@ AseGeneCounts <- as.data.frame(table(genesQsample[genesQsample$qvalue<0.05,"ense
 colnames(AseGeneCounts) <- c("ensembl_gene_id","Frequency")
 
 # Barplot gene frequencies across individuals
-genecounts <- ggplot(AseGeneCounts, aes(x = Frequency)) +
+tiff("Gene_counts_histogram.tif", res = 300, width = 85, height = 85, units = "mm")
+ggplot(AseGeneCounts, aes(x = Frequency)) +
   geom_bar(color = "#00468BFF", fill = "#00468BFF", alpha = 0.2) +
   scale_x_continuous(expand = c(0,0)) +
   scale_y_continuous(expand = c(0,0)) +
@@ -674,8 +641,6 @@ genecounts <- ggplot(AseGeneCounts, aes(x = Frequency)) +
     axis.title = element_text(face = "bold", size = 12),
     axis.ticks = element_blank(), 
   )
-tiff("Gene_counts_histogram.tif", res = 300, width = 85, height = 85, units = "mm")
-print(genecounts)
 dev.off()
 
 # Get genes with a significant ASE measurement in at least third of samples
@@ -684,6 +649,7 @@ AseGenes33perc <- as.character(AseGeneCounts[AseGeneCounts$Freq>=(ncol(absData)/
 # FUNCTION FOR TOPGO
 ase.topGO <- function(inputData, statvalue = "pvalue", filename, genelist = FALSE) {
   if (genelist == TRUE) {
+    goxl <- list()
     # Run the topGO analysis
     for (j in c("BP", "CC", "MF")) {			
       message(j)		
@@ -698,25 +664,15 @@ ase.topGO <- function(inputData, statvalue = "pvalue", filename, genelist = FALS
                     annot = annFUN.org,
                     mapping = "org.Hs.eg.db",
                     ID = "ensembl")
-      goRes <- runTest(GOdata, algorithm = "parentchild", statistic = "fisher") # recommended setting		
-      allRes <- GenTable(GOdata, Pvalue = goRes, 		
-                         topNodes = length(goRes@score),
-                         orderBy = "Pvalue", ranksOf = "Pvalue",
-                         numChar = 1E9)
-      if (all(as.numeric(allRes$Pvalue) >= 0.05)) {
-        allRes <- allRes[1, ]
-        allRes[, 1:6] <- NA
-      } else {
-        allRes <- allRes[1:max(which(as.numeric(allRes[,6]) < 0.05)), ] # leave only results with p < 0.05
+      goRes <- runTest(GOdata, algorithm = "parentchild", statistic = "fisher") # recommended setting
+      goxl[[j]] <- GenTable(GOdata, Pvalue = goRes, 		
+                     topNodes = length(goRes@score),
+                     orderBy = "Pvalue", ranksOf = "Pvalue",
+                     numChar = 1E9)
       }
-      write.xlsx(allRes,		
-                 file = filename, 
-                 sheet = ifelse(j == "BP", "BiologicalProcess", 
-                                ifelse(j == "CC", "CellularComponent", "MolecularFunction")),
-                 row.names = FALSE,
-                 append = TRUE)
-    }
+    write_xlsx(goxl, path = filename)
   } else {
+    goxl <- list()
     # Create a data frame of all IDs with corresponding lowest qvalues for each gene
     genesQsample <- inputData[,c(statvalue,"ensembl_gene_id")]
     
@@ -745,23 +701,12 @@ ase.topGO <- function(inputData, statvalue = "pvalue", filename, genelist = FALS
                     mapping = "org.Hs.eg.db",
                     ID = "ensembl")
       goRes <- runTest(GOdata, algorithm = "parentchild", statistic = "fisher") # recommended setting		
-      allRes <- GenTable(GOdata, Pvalue = goRes, 		
-                         topNodes = length(goRes@score),
-                         orderBy = "Pvalue", ranksOf = "Pvalue",
-                         numChar = 1E9)
-      if (all(as.numeric(allRes$Pvalue) >= 0.05)) {
-        allRes <- allRes[1, ]
-        allRes[, 1:6] <- NA
-      } else {
-        allRes <- allRes[1:max(which(as.numeric(allRes[,6]) < 0.05)), ] # leave only results with p < 0.05
-      }
-      write.xlsx(allRes,		
-                 file = filename, 
-                 sheet = ifelse(j == "BP", "BiologicalProcess", 
-                                ifelse(j == "CC", "CellularComponent", "MolecularFunction")),
-                 row.names = FALSE,
-                 append = TRUE)
+      goxl[[j]] <- GenTable(GOdata, Pvalue = goRes, 		
+                            topNodes = length(goRes@score),
+                            orderBy = "Pvalue", ranksOf = "Pvalue",
+                            numChar = 1E9)
     }
+    write_xlsx(goxl, path = filename)
   }
 }
 
@@ -886,7 +831,6 @@ for (k in unique(na.omit(clinData$Group))) {
   rm(snps2genesQcluster,AseGenes33percCluster)
 }
 
-
 #-----------------------------------------------------------------------------#
 # 8. Identify differential imbalance between groups
 #-----------------------------------------------------------------------------#
@@ -944,61 +888,60 @@ diffAseAcross <- function(asedata, clinicaldata, groupVar) {
   return(kwVals)
 }
 
-# MANN-WHITNEY U TEST PER CLUSTER VS. REST 
-# WILCOXON TEST PER CLUSTER VS. REST 
+# WILCOXON TEST PER GROUP VS. REST 
 mwVals <- list()
-for (i in unique(clinData$Group[!is.na(clinData$Group)])) {
-  newLabels <- clinData[, c("SID", "Group")]
+for (i in unique(clinData$group[!is.na(clinData$group)])) {
+  newLabels <- clinData[, c("SID", "group")]
   newLabels <- na.omit(newLabels)
-  newLabels$Group <- as.numeric(newLabels$Group)
-  newLabels[!newLabels$Group==i, "Group"] <- 0
-  newLabels[newLabels$Group==i, "Group"] <- 1
-  newLabels$Group <- as.factor(newLabels$Group)
-  mwVals[[paste0("Cluster_", i)]] <- diffAse(absData, newLabels, "Group")
-  names(mwVals[[paste0("Cluster_", i)]]) <- rownames(absData)
+  newLabels$group <- as.numeric(newLabels$group)
+  newLabels[!newLabels$group==i, "group"] <- 0
+  newLabels[newLabels$group==i, "group"] <- 1
+  newLabels$group <- as.factor(newLabels$group)
+  mwVals[[paste0("group_", i)]] <- diffAse(absData, newLabels, "group")
+  names(mwVals[[paste0("group_", i)]]) <- rownames(absData)
 }
 
-diffAseCluster <- as.data.frame(mwVals)
-diffAseCluster <- na.omit(diffAseCluster)
-diffAseCluster$rsid <- rownames(diffAseCluster)
-diffAseCluster <- full_join(diffAseCluster,snp2geneData[,c("rsid", "ensembl_gene_id")])
+diffAseResults <- as.data.frame(mwVals)
+diffAseResults <- na.omit(diffAseResults)
+diffAseResults$rsid <- rownames(diffAseResults)
+diffAseResults <- full_join(diffAseResults,snp2geneData[,c("rsid", "ensembl_gene_id")])
 
-cluster1 <- na.omit(unique(diffAseCluster[diffAseCluster$Cluster.1<0.05,"ensembl_gene_id"]))
-cluster2 <- na.omit(unique(diffAseCluster[diffAseCluster$Cluster.2<0.05,"ensembl_gene_id"]))
-cluster3 <- na.omit(unique(diffAseCluster[diffAseCluster$Cluster.3<0.05,"ensembl_gene_id"]))
-cluster4 <- na.omit(unique(diffAseCluster[diffAseCluster$Cluster.4<0.05,"ensembl_gene_id"]))
+group1 <- na.omit(unique(diffAseResults[diffAseResults$group_1<0.05,"ensembl_gene_id"]))
+group2 <- na.omit(unique(diffAseResults[diffAseResults$group_2<0.05,"ensembl_gene_id"]))
+group3 <- na.omit(unique(diffAseResults[diffAseResults$group-3<0.05,"ensembl_gene_id"]))
+group4 <- na.omit(unique(diffAseResults[diffAseResults$group_4<0.05,"ensembl_gene_id"]))
 
-ase.topGO(inputData = cluster1,
+ase.topGO(inputData = group1,
           genelist = TRUE,
-          filename = "topGO_cluster1_vsAll.xlsx")
+          filename = "topGO_group1_vsAll.xlsx")
 
-ase.topGO(inputData = cluster2,
+ase.topGO(inputData = group2,
           genelist = TRUE,
-          filename = "topGO_cluster2_vsAll.xlsx")
+          filename = "topGO_group2_vsAll.xlsx")
 
-ase.topGO(inputData = cluster3,
+ase.topGO(inputData = group3,
           genelist = TRUE,
-          filename = "topGO_cluster3_vsAll.xlsx")
+          filename = "topGO_group3_vsAll.xlsx")
 
-ase.topGO(inputData = cluster4,
+ase.topGO(inputData = group4,
           genelist = TRUE,
-          filename = "topGO_cluster4_vsAll.xlsx")
+          filename = "topGO_group4_vsAll.xlsx")
 
 # Make manhattan plot for across phenogroups comparison
-acrossClustCompRes <- diffAseAcross(absData, groupVar = "Group")
-acrossClusterRes <- as.data.frame(acrossClustCompRes)
-acrossClusterRes <- na.omit(acrossClusterRes)
-colnames(acrossClusterRes)[1] <- "pvalue"
-acrossClusterRes$rsid <- rownames(acrossClusterRes)
-annAcross <- annData[annData$rsid %in% acrossClusterRes$rsid,]
+acrossCompRes <- diffAseAcross(absData, groupVar = "group")
+acrossCompRes <- as.data.frame(acrossCompRes)
+acrossCompRes <- na.omit(acrossCompRes)
+colnames(acrossCompRes)[1] <- "pvalue"
+acrossCompRes$rsid <- rownames(acrossCompRes)
+annAcross <- annData[annData$rsid %in% acrossCompRes$rsid,]
 
-aseManhattan(input = acrossClusterRes,
+aseManhattan(input = acrossCompRes,
              annotation = annAcross,
              gws = 0.05,
-             filename = "Across_Groups_Manhattan")
+             filename = "Across_groups_Manhattan")
 
 # topGO and QTL enrichment across phenogroups
-snps2genesPacross <- full_join(acrossClusterRes,annAcross)
+snps2genesPacross <- full_join(acrossCompRes,annAcross)
 ase.topGO(inputData = snps2genesPacross,
           filename = "topGO_across.xlsx")
 
@@ -1013,31 +956,34 @@ boxplotData$rsid <- rownames(boxplotData)
 boxplotData <- pivot_longer(boxplotData, c(1:(ncol(boxplotData)-1)), 
                             names_to = "SID")
 colnames(boxplotData)[3] <- "ASE"
-boxplotData <- full_join(boxplotData, clinData[,c("SID","Group")])
+boxplotData <- full_join(boxplotData, clinData[,c("SID","group")])
 boxplotData <- na.omit(boxplotData)
 
 snpBoxplotAcross <- 
-  acrossClusterRes[acrossClusterRes$pvalue==min(acrossClusterRes$pvalue, na.rm = T),"rsid"]
+  acrossCompRes[acrossCompRes$pvalue==min(acrossCompRes$pvalue, na.rm = T),"rsid"]
 
 boxplotAcross <- boxplotData[boxplotData$rsid==snpBoxplotAcross,]
+boxplotAcross$group <- as.character(boxplotAcross$group)
 
-summ <- boxplotAcross %>% group_by(Group) %>% summarize(n = n(), avg = max(ASE))
+summ <- boxplotAcross %>% group_by(group) %>% summarize(n = n(), avg = max(ASE))
 
-boxplotplot <- ggplot(boxplotAcross, aes(x = Group, y = ASE, fill = Group)) +
+boxplotplot <- ggplot(boxplotAcross, aes(x = group, y = ASE, fill = group)) +
   geom_boxplot(alpha = 0.5) +
   labs(x = "Phenogroup", y = "ASE score", fill = "Phenogroup") +
   scale_fill_brewer(palette = "Dark2") +
   coord_fixed(ratio = 8) +
-  geom_text(data = summ, inherit.aes = FALSE, aes(x = Group, label = n, y = avg+0.05), size = 3) +
+  geom_text(data = summ, inherit.aes = FALSE, aes(x = group, label = n, y = avg+0.05), size = 3) +
+  ggtitle("rs9766 in EZH1") +
   theme(
     legend.position = "right",
     legend.key = element_rect(fill = "transparent"),
     legend.title = element_text(size = 8),
     legend.text = element_text(size = 8),
-    axis.line = element_line(colour = "black", linewidth = 1),
+    axis.line = element_line(colour = "black", size = 1),
     panel.grid.major.y = element_blank(),
     panel.background = element_rect(fill = "white"),
-    title = element_text(face = "bold"),
+    title = element_text(face = "bold", size = 10),
+    plot.title = element_text(face = "bold", size = 10),
     axis.text.x = element_text(size = 8, margin = margin(l=0,r=0,t=10,b=0)),
     axis.text.y = element_text(size = 8, margin = margin(l=0,r=10,t=0,b=0)),
     axis.title.x = element_text(size = 10, margin = margin(l=0,r=0,t=10,b=0)),
@@ -1050,58 +996,64 @@ tiff(filename=paste0("Boxplot_",snpBoxplotAcross,"_across.tif"),
 print(boxplotplot)
 dev.off()
 
-# Do phenotype Group differential ASE analysis
-allClustCompRes <- list()
-allClustCompEffectRes <- list()
-for (clinVar in paste("Group_", c(2,3,4,3,4,4),
-                      "vs", c(1,1,1,2,2,3), sep = "")){
+# Do phenotype group differential ASE analysis
+allGroupCompRes <- list()
+allGroupCompEffectRes <- list()
+
+combinations <- combn(unique(clinData$group[!is.na(clinData$group)]), 2)
+
+for (set in 1:ncol(combinations)) {
+  test <- paste0(combinations[1,set], "_versus_",combinations[2,set])
+  if(!dir.exists(test)) { 
+    dir.create(test)
+  }
+  setwd(test)
   
-  if(!dir.exists(paste(clinVar, "results"))) {
-    dir.create(paste(clinVar, "results"))
-  } 
-  setwd(paste(clinVar, "results"))
+  clintest <- clinData[clinData$group==combinations[1,set] | clinData$group==combinations[2,set],]
+  clintest <- clintest[!is.na(clintest$group),]
   
-  diffAseRes <- diffAse(absData, clinVar) 
-  diffAseEffectRes <- diffAseEffect(absData, clinVar) 
-  allClustCompRes[[clinVar]] <- diffAseRes
-  allClustCompEffectRes[[clinVar]] <- diffAseEffectRes
+  diffAseRes <- diffAse(absData, clintest, "group")
+  diffAseEff <- diffAseEffect(absData, clintest, "group")
   
-  # Make manhattan plot for current clinVar comparison
-  resClinVar <- na.omit(as.data.frame(allClustCompRes[[clinVar]]))
-  colnames(resClinVar)[1] <- "pvalue"
-  resClinVar$rsid <- rownames(resClinVar)
-  annClinVar <- annData[annData$rsid %in% resClinVar$rsid,]
+  allGroupCompRes[[test]] <- diffAseRes
+  allGroupCompEffectRes[[test]] <- diffAseEff
+  
+  # Make manhattan plot for current comparison
+  resTest <- na.omit(as.data.frame(allGroupCompRes[[test]]))
+  colnames(resTest)[1] <- "pvalue"
+  resTest$rsid <- rownames(resTest)
+  annTest <- annData[annData$rsid %in% resTest$rsid,]
   
   # Get cummulative position
-  aseManhattan(input = resClinVar,
+  aseManhattan(input = resTest,
                statvalue = "pvalue",
-               annotation = annClinVar,
+               annotation = annTest,
                gws = 0.05,
-               filename = paste0(clinVar,"_Manhattan"))
+               filename = paste0(test,"_Manhattan"))
   
   # Boxplot of most significantly differentially imbalanced SNP
   currBoxplotData <- boxplotData[boxplotData$SID %in% 
-                                   clinData[!is.na(clinData[[clinVar]]),"SID"],]
+                                   clinData[!is.na(clinData[[test]]),"SID"],]
   # Get most significant hit
   snpBoxplot <- 
-    resClinVar[resClinVar$pvalue==min(resClinVar$pvalue),"rsid"]
+    resTest[resTest$pvalue==min(resTest$pvalue),"rsid"]
   currBoxplotData <- currBoxplotData[currBoxplotData$rsid==snpBoxplot,]
   
-  summ <- currBoxplotData %>% group_by(Group) %>% summarize(n = n(), avg = max(ASE))
+  summ <- currBoxplotData %>% group_by(group) %>% summarize(n = n(), avg = max(ASE))
   
   # Create ggplot
-  boxplotplot <- ggplot(currBoxplotData, aes(x = Group, y = ASE, fill = Group)) +
+  boxplotplot <- ggplot(currBoxplotData, aes(x = group, y = ASE, fill = group)) +
     geom_boxplot(alpha = 0.5) +
     labs(x = "Phenogroup", y = "ASE score", fill = "Phenogroup") +
     scale_fill_brewer(palette = "Dark2") +
     coord_fixed(ratio = 8) +
-    geom_text(data = summ, inherit.aes = FALSE, aes(x = Group, label = n, y = avg+0.05), size = 3) +
+    geom_text(data = summ, inherit.aes = FALSE, aes(x = group, label = n, y = avg+0.05), size = 3) +
     theme(
       legend.position = "right",
       legend.key = element_rect(fill = "transparent"),
       legend.title = element_text(size = 8),
       legend.text = element_text(size = 8),
-      axis.line = element_line(colour = "black", linewidth = 1),
+      axis.line = element_line(colour = "black", size = 1),
       panel.grid.major.y = element_blank(),
       panel.background = element_rect(fill = "white"),
       title = element_text(face = "bold"),
@@ -1119,29 +1071,29 @@ for (clinVar in paste("Group_", c(2,3,4,3,4,4),
   
   # Volcano plot with effect size
   # Get annotation data necessary for volcano plot
-  volClinVar <- na.omit(as.data.frame(allClustCompEffectRes[[clinVar]]))
-  colnames(volClinVar)[1] <- "effect"
-  volClinVar$rsid <- rownames(volClinVar)
-  annVolClinvar <- annData[annData$rsid %in% volClinVar$rsid,]
+  volTest <- na.omit(as.data.frame(allGroupCompEffectRes[[test]]))
+  colnames(volTest)[1] <- "effect"
+  volTest$rsid <- rownames(volTest)
+  annVoltest <- annData[annData$rsid %in% volTest$rsid,]
   # Restructure and merge data
-  volClinVar <- full_join(volClinVar, annVolClinvar)
-  volClinVar <- full_join(volClinVar, resClinVar)
-  volClinVar$threshold <- factor(ifelse(volClinVar$effect>0 & 
-                                          volClinVar$pvalue<0.05,
-                                        1,ifelse(volClinVar$effect<0 & 
-                                                   volClinVar$pvalue<0.05,-1,
+  volTest <- full_join(volTest, annVoltest)
+  volTest <- full_join(volTest, restest)
+  volTest$threshold <- factor(ifelse(volTest$effect>0 & 
+                                       volTest$pvalue<0.05,
+                                        1,ifelse(volTest$effect<0 & 
+                                                   volTest$pvalue<0.05,-1,
                                                  0)))
-  volClinVar$abseff <- abs(volClinVar$effect)
-  ylim <- (-log10(min(volClinVar$pvalue)) + 0.5)
+  volTest$abseff <- abs(volTest$effect)
+  ylim <- (-log10(min(volTest$pvalue)) + 0.5)
   # ggplot volcanoplot
-  volcanoplot <- ggplot(volClinVar, aes(x = effect, y = -log10(pvalue), 
+  volcanoplot <- ggplot(volTest, aes(x = effect, y = -log10(pvalue), 
                                         color = threshold)) +
     scale_x_continuous(expand = c(0,0)) +
     scale_y_continuous(expand = c(0,0), limits = c(0,ylim)) +
     geom_hline(yintercept = -log10(0.05), color = "grey40", linetype = "dashed") +
     geom_point(alpha = 0.75) +
     scale_color_manual(values = c("blue", "black","red")) +
-    labs(x = "Difference in median ASE scores of clusters 4 and 3", 
+    labs(x = "Difference in median ASE scores of groups 4 and 3", 
          y = "-log10(p)") +
     theme_minimal() + 
     theme(legend.position = "none") +
@@ -1152,42 +1104,42 @@ for (clinVar in paste("Group_", c(2,3,4,3,4,4),
       panel.grid.minor.x = element_blank(),
       axis.text.x = element_text(angle = 0, size = 10, vjust = 0.5)
     )
-  png(filename=paste0("Volcano_",clinVar,".png"), width=800, height=500)
+  png(filename=paste0("Volcano_",test,".png"), width=800, height=500)
   print(volcanoplot)
   dev.off()
   setwd(RES.DIR)
 }
 
-# QTL and topGO enrichment for cluster analyses
-for (clinVar in paste("Group_", c(2,3,4,3,4,4),
-                      "vs", c(1,1,1,2,2,3), sep = "")){
+# QTL and topGO enrichment for group analyses
+for (set in 1:ncol(combinations)) {
+  test <- paste0(combinations[1,set], "_versus_",combinations[2,set])
+  if(!dir.exists(test)) { 
+    dir.create(test)
+  }
+  setwd(test)
   
-  if(!dir.exists(paste(clinVar, "results"))) {
-    dir.create(paste(clinVar, "results"))
-  } 
-  
-  setwd(paste(clinVar, "results"))
-  resClinVar <- na.omit(as.data.frame(allClustCompRes[[clinVar]]))
-  colnames(resClinVar)[1] <- "pvalue"
-  resClinVar$rsid <- rownames(resClinVar)
-  # Do QTL enrichment for the current cluster comparison results
-  snps2genesPCurr <- full_join(snp2geneData,resClinVar)
+  setwd(paste0(test, "_results"))
+  restest <- na.omit(as.data.frame(allGroupCompRes[[test]]))
+  colnames(restest)[1] <- "pvalue"
+  restest$rsid <- rownames(restest)
+  # Do QTL enrichment for the current group comparison results
+  snps2genesPCurr <- full_join(snp2geneData,restest)
   
   snps2genesPCurr <- na.omit(snps2genesPCurr)
   ase.qtl.enrich(inputData = snps2genesPCurr,
                  sqtl = gtexsqtl,
                  eqtl = gtexeqtl)
   
-  # GO enrichment between clusters
+  # GO enrichment between group
   ase.topGO(inputData = snps2genesPCurr,
             statvalue = "pvalue",
-            filename = paste0("topGO_", clinVar, ".xlsx"))
+            filename = paste0("topGO_", test, ".xlsx"))
   
   setwd(RES.DIR)
 }
 
 #-----------------------------------------------------------------------------#
-# 10. Save stuff
+# 9. Save stuff
 #-----------------------------------------------------------------------------#
 
 setwd(DATA.DIR)
