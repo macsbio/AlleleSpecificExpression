@@ -23,7 +23,7 @@
 #-----------------------------------------------------------------------------#
 
 # Some information about necessary files and column headers
-# Clinical file should contain an SID header and Group (for cluster number or case/control) header
+# Clinical file should contain an SID header and group (for group/cluster number or case/control) header
 # For other general column names use:
 #   EnsgID header --> ensemble_gene_id
 #   HGNC header --> hgnc_symbol
@@ -39,7 +39,7 @@
 rm(list = ls(all.names = T))
 
 clinicalfile <- "Complete_Clinicaldataset_RNAseq_Genetics_20180801.xlsx"
-groups.col.name <- "Group"
+groups.col.name <- "group"
 ASEReadCounterFile <- "ASEReadCounterOutput_Processed_DCM.RData"
 genes_of_interest <- "DCM_genes.txt"
 
@@ -803,7 +803,7 @@ ase.topGO(inputData = AseGenes33perc,
           filename = "topGO_33perc.xlsx")
 
 #-----------------------------------------------------------------------------#
-# 7. eQTL and sQTL enrichment analysis (and topGO per cluster)
+# 7. eQTL and sQTL enrichment analysis (and topGO per group)
 #-----------------------------------------------------------------------------#
 
 setwd(DATA.DIR)
@@ -882,27 +882,27 @@ ase.qtl.enrich(inputData = snps2genesQ,
 
 # Perform topGO analysis per group/cluster for all and top 33% shared imbalances
 setwd(RES.DIR)
-for (k in unique(na.omit(clinData$Group))) {
-  snps2genesQcluster <- 
-    snps2genesQ[snps2genesQ$SID %in% clinData[clinData$Group==2,"SID"],]
+for (k in unique(na.omit(clinData$group))) {
+  snps2genesQgroup <- 
+    snps2genesQ[snps2genesQ$SID %in% clinData[clinData$group==2,"SID"],]
   
   # topGO
-  ase.topGO(inputData = snps2genesQcluster,
+  ase.topGO(inputData = snps2genesQgroup,
             statvalue = "qvalue",
             filename = paste0("Cluster_",k,"_topGO_total.xlsx"))
   
-  genesQcluster <- snps2genesQcluster[,c("SID","qvalue","ensembl_gene_id")]
+  genesQgroup <- snps2genesQgroup[,c("SID","qvalue","ensembl_gene_id")]
   
-  genesQcluster <- genesQcluster[order(genesQcluster$SID, 
-                                       genesQcluster$ensembl_gene_id, 
-                                       genesQcluster$qvalue),]
+  genesQgroup <- genesQgroup[order(genesQgroup$SID, 
+                                       genesQgroup$ensembl_gene_id, 
+                                       genesQgroup$qvalue),]
   
   # Take most significant hit per person per gene
-  genesQcluster <- genesQcluster %>% distinct(SID, ensembl_gene_id, .keep_all= TRUE)
-  genesQcluster <- na.omit(genesQcluster)
+  genesQgroup <- genesQgroup %>% distinct(SID, ensembl_gene_id, .keep_all= TRUE)
+  genesQgroup <- na.omit(genesQgroup)
   
   # Count amount of times gene pops up as < 0.05
-  AseGeneCountsCluster <- as.data.frame(table(genesQcluster[genesQcluster$qvalue<0.05,"ensembl_gene_id"]))
+  AseGeneCountsCluster <- as.data.frame(table(genesQgroup[genesQgroup$qvalue<0.05,"ensembl_gene_id"]))
   colnames(AseGeneCountsCluster) <- c("ensembl_gene_id","Frequency")
   
   AseGenes33percCluster <- 
@@ -911,7 +911,7 @@ for (k in unique(na.omit(clinData$Group))) {
   ase.topGO(inputData = AseGenes33perc,
             genelist = TRUE,
             filename = paste0("Cluster_",k,"_topGO_33perc.xlsx"))
-  rm(snps2genesQcluster,AseGenes33percCluster)
+  rm(snps2genesQgroup,AseGenes33percCluster)
 }
 
 
@@ -922,8 +922,8 @@ for (k in unique(na.omit(clinData$Group))) {
 # Function for differential ASE analysis BETWEEN 2 GROUPS
 diffAse <- function(asedata, clinicaldata, groupVar) {
   gvar <- data.frame(clinicaldata[, c("SID", groupVar)])
-  gvar2 <- gvar[match(colnames(asedata), gvar[, 1]),]
-  pVals <- apply(asedata, 1, function(x) {
+  gvar2 <- gvar[match(colnames(data), gvar[, 1]),]
+  pVals <- apply(data, 1, function(x) {
     testData <- split(as.vector(as.matrix(x)), gvar2[, groupVar])
     p <- NA
     try ({
@@ -933,15 +933,15 @@ diffAse <- function(asedata, clinicaldata, groupVar) {
     )
     return(p)
   })
-  names(pVals) <- rownames(asedata)
+  names(pVals) <- rownames(data)
   return(pVals)
 }
 
 # Create effect size data frame (effect is d(medians))
 diffAseEffect <- function(asedata, clinicaldata, groupVar) {
   gvar <- data.frame(clinicaldata[, c("SID", groupVar)])
-  gvar2 <- gvar[match(colnames(asedata), gvar[, 1]),]
-  eVals <- apply(asedata, 1, function(x) {
+  gvar2 <- gvar[match(colnames(data), gvar[, 1]),]
+  eVals <- apply(data, 1, function(x) {
     testData <- split(as.vector(as.matrix(x)), gvar2[, groupVar])
     e <- NA
     try ({
@@ -951,15 +951,15 @@ diffAseEffect <- function(asedata, clinicaldata, groupVar) {
     )
     return(e)
   })
-  names(eVals) <- rownames(asedata)
+  names(eVals) <- rownames(data)
   return(eVals)
 }
 
 # Function for differential ASE analysis ACROSS 3 OR MORE PHENOGROUPS
 diffAseAcross <- function(asedata, clinicaldata, groupVar) {
   gvar <- data.frame(clinicaldata[, c("SID", groupVar)])
-  gvar2 <- gvar[match(colnames(asedata), gvar[, 1]),]
-  kwVals <- apply(asedata, 1, function(x) {
+  gvar2 <- gvar[match(colnames(absData), gvar[, 1]),]
+  kwVals <- apply(data, 1, function(x) {
     testData <- split(as.vector(as.matrix(x)), gvar2[, groupVar])
     kw <- NA
     try ({
@@ -968,64 +968,64 @@ diffAseAcross <- function(asedata, clinicaldata, groupVar) {
     )
     return(kw)
   })
-  names(kwVals) <- rownames(asedata)
+  names(kwVals) <- rownames(data)
   return(kwVals)
 }
 
-# WILCOXON TEST PER CLUSTER VS. REST 
+# WILCOXON TEST PER GROUP VS. REST 
 mwVals <- list()
-for (i in unique(clinData$Group[!is.na(clinData$Group)])) {
-  newLabels <- clinData[, c("SID", "Group")]
+for (i in unique(clinData$group[!is.na(clinData$group)])) {
+  newLabels <- clinData[, c("SID", "group")]
   newLabels <- na.omit(newLabels)
-  newLabels$Group <- as.numeric(newLabels$Group)
-  newLabels[!newLabels$Group==i, "Group"] <- 0
-  newLabels[newLabels$Group==i, "Group"] <- 1
-  newLabels$Group <- as.factor(newLabels$Group)
-  mwVals[[paste0("Cluster_", i)]] <- diffAse(absData, newLabels, "Group")
-  names(mwVals[[paste0("Cluster_", i)]]) <- rownames(absData)
+  newLabels$group <- as.numeric(newLabels$group)
+  newLabels[!newLabels$group==i, "group"] <- 0
+  newLabels[newLabels$group==i, "group"] <- 1
+  newLabels$group <- as.factor(newLabels$group)
+  mwVals[[paste0("group_", i)]] <- diffAse(absData, newLabels, "group")
+  names(mwVals[[paste0("group_", i)]]) <- rownames(absData)
 }
 
-diffAseCluster <- as.data.frame(mwVals)
-diffAseCluster <- na.omit(diffAseCluster)
-diffAseCluster$rsid <- rownames(diffAseCluster)
-diffAseCluster <- full_join(diffAseCluster,snp2geneData[,c("rsid", "ensembl_gene_id")])
+diffAseResults <- as.data.frame(mwVals)
+diffAseResults <- na.omit(diffAseResults)
+diffAseResults$rsid <- rownames(diffAseResults)
+diffAseResults <- full_join(diffAseResults,snp2geneData[,c("rsid", "ensembl_gene_id")])
 
-cluster1 <- na.omit(unique(diffAseCluster[diffAseCluster$Cluster_1<0.05,"ensembl_gene_id"]))
-cluster2 <- na.omit(unique(diffAseCluster[diffAseCluster$Cluster_2<0.05,"ensembl_gene_id"]))
-cluster3 <- na.omit(unique(diffAseCluster[diffAseCluster$Cluster-3<0.05,"ensembl_gene_id"]))
-cluster4 <- na.omit(unique(diffAseCluster[diffAseCluster$Cluster_4<0.05,"ensembl_gene_id"]))
+group1 <- na.omit(unique(diffAseResults[diffAseResults$group_1<0.05,"ensembl_gene_id"]))
+group2 <- na.omit(unique(diffAseResults[diffAseResults$group_2<0.05,"ensembl_gene_id"]))
+group3 <- na.omit(unique(diffAseResults[diffAseResults$group-3<0.05,"ensembl_gene_id"]))
+group4 <- na.omit(unique(diffAseResults[diffAseResults$group_4<0.05,"ensembl_gene_id"]))
 
-ase.topGO(inputData = cluster1,
+ase.topGO(inputData = group1,
           genelist = TRUE,
-          filename = "topGO_cluster1_vsAll.xlsx")
+          filename = "topGO_group1_vsAll.xlsx")
 
-ase.topGO(inputData = cluster2,
+ase.topGO(inputData = group2,
           genelist = TRUE,
-          filename = "topGO_cluster2_vsAll.xlsx")
+          filename = "topGO_group2_vsAll.xlsx")
 
-ase.topGO(inputData = cluster3,
+ase.topGO(inputData = group3,
           genelist = TRUE,
-          filename = "topGO_cluster3_vsAll.xlsx")
+          filename = "topGO_group3_vsAll.xlsx")
 
-ase.topGO(inputData = cluster4,
+ase.topGO(inputData = group4,
           genelist = TRUE,
-          filename = "topGO_cluster4_vsAll.xlsx")
+          filename = "topGO_group4_vsAll.xlsx")
 
 # Make manhattan plot for across phenogroups comparison
-acrossClustCompRes <- diffAseAcross(absData, groupVar = "Group")
-acrossClusterRes <- as.data.frame(acrossClustCompRes)
-acrossClusterRes <- na.omit(acrossClusterRes)
-colnames(acrossClusterRes)[1] <- "pvalue"
-acrossClusterRes$rsid <- rownames(acrossClusterRes)
-annAcross <- annData[annData$rsid %in% acrossClusterRes$rsid,]
+acrossCompRes <- diffAseAcross(absData, groupVar = "group")
+acrossCompRes <- as.data.frame(acrossCompRes)
+acrossCompRes <- na.omit(acrossCompRes)
+colnames(acrossCompRes)[1] <- "pvalue"
+acrossCompRes$rsid <- rownames(acrossCompRes)
+annAcross <- annData[annData$rsid %in% acrossCompRes$rsid,]
 
-aseManhattan(input = acrossClusterRes,
+aseManhattan(input = acrossCompRes,
              annotation = annAcross,
              gws = 0.05,
-             filename = "Across_Groups_Manhattan")
+             filename = "Across_groups_Manhattan")
 
 # topGO and QTL enrichment across phenogroups
-snps2genesPacross <- full_join(acrossClusterRes,annAcross)
+snps2genesPacross <- full_join(acrossCompRes,annAcross)
 ase.topGO(inputData = snps2genesPacross,
           filename = "topGO_across.xlsx")
 
@@ -1040,29 +1040,30 @@ boxplotData$rsid <- rownames(boxplotData)
 boxplotData <- pivot_longer(boxplotData, c(1:(ncol(boxplotData)-1)), 
                             names_to = "SID")
 colnames(boxplotData)[3] <- "ASE"
-boxplotData <- full_join(boxplotData, clinData[,c("SID","Group")])
+boxplotData <- full_join(boxplotData, clinData[,c("SID","group")])
 boxplotData <- na.omit(boxplotData)
 
 snpBoxplotAcross <- 
-  acrossClusterRes[acrossClusterRes$pvalue==min(acrossClusterRes$pvalue, na.rm = T),"rsid"]
+  acrossCompRes[acrossCompRes$pvalue==min(acrossCompRes$pvalue, na.rm = T),"rsid"]
 
 boxplotAcross <- boxplotData[boxplotData$rsid==snpBoxplotAcross,]
-boxplotAcross$Group <- as.character(boxplotAcross$Group)
+boxplotAcross$group <- as.character(boxplotAcross$group)
 
-summ <- boxplotAcross %>% group_by(Group) %>% summarize(n = n(), avg = max(ASE))
+summ <- boxplotAcross %>% group_by(group) %>% summarize(n = n(), avg = max(ASE))
 
-boxplotplot <- ggplot(boxplotAcross, aes(x = Group, y = ASE, fill = Group)) +
+boxplotplot <- ggplot(boxplotAcross, aes(x = group, y = ASE, fill = group)) +
   geom_boxplot(alpha = 0.5) +
   labs(x = "Phenogroup", y = "ASE score", fill = "Phenogroup") +
   scale_fill_brewer(palette = "Dark2") +
   coord_fixed(ratio = 8) +
-  geom_text(data = summ, inherit.aes = FALSE, aes(x = Group, label = n, y = avg+0.05), size = 3) +
+  geom_text(data = summ, inherit.aes = FALSE, aes(x = group, label = n, y = avg+0.05), size = 3) +
+  ggtitle("rs9766 in EZH1") +
   theme(
     legend.position = "right",
     legend.key = element_rect(fill = "transparent"),
     legend.title = element_text(size = 8),
     legend.text = element_text(size = 8),
-    axis.line = element_line(colour = "black", linewidth = 1),
+    axis.line = element_line(colour = "black", size = 1),
     panel.grid.major.y = element_blank(),
     panel.background = element_rect(fill = "white"),
     title = element_text(face = "bold", size = 10),
@@ -1079,11 +1080,11 @@ tiff(filename=paste0("Boxplot_",snpBoxplotAcross,"_across.tif"),
 print(boxplotplot)
 dev.off()
 
-# Do phenotype Group differential ASE analysis
-allClustCompRes <- list()
-allClustCompEffectRes <- list()
+# Do phenotype group differential ASE analysis
+allGroupCompRes <- list()
+allGroupCompEffectRes <- list()
 
-combinations <- combn(unique(clinData$Group[!is.na(clinData$Group)]), 2)
+combinations <- combn(unique(clinData$group[!is.na(clinData$group)]), 2)
 
 for (set in 1:ncol(combinations)) {
   test <- paste0(combinations[1,set], "_versus_",combinations[2,set])
@@ -1092,17 +1093,17 @@ for (set in 1:ncol(combinations)) {
   }
   setwd(test)
   
-  clintest <- clinData[clinData$Group==combinations[1,set] | clinData$Group==combinations[2,set],]
-  clintest <- clintest[!is.na(clintest$Group),]
+  clintest <- clinData[clinData$group==combinations[1,set] | clinData$group==combinations[2,set],]
+  clintest <- clintest[!is.na(clintest$group),]
   
-  diffAseRes <- diffAse(absData, clintest, "Group")
-  diffAseEff <- diffAseEffect(absData, clintest, "Group")
+  diffAseRes <- diffAse(absData, clintest, "group")
+  diffAseEff <- diffAseEffect(absData, clintest, "group")
   
-  allClustCompRes[[test]] <- diffAseRes
-  allClustCompEffectRes[[test]] <- diffAseEff
+  allGroupCompRes[[test]] <- diffAseRes
+  allGroupCompEffectRes[[test]] <- diffAseEff
   
   # Make manhattan plot for current comparison
-  resTest <- na.omit(as.data.frame(allClustCompRes[[test]]))
+  resTest <- na.omit(as.data.frame(allGroupCompRes[[test]]))
   colnames(resTest)[1] <- "pvalue"
   resTest$rsid <- rownames(resTest)
   annTest <- annData[annData$rsid %in% resTest$rsid,]
@@ -1122,21 +1123,21 @@ for (set in 1:ncol(combinations)) {
     resTest[resTest$pvalue==min(resTest$pvalue),"rsid"]
   currBoxplotData <- currBoxplotData[currBoxplotData$rsid==snpBoxplot,]
   
-  summ <- currBoxplotData %>% group_by(Group) %>% summarize(n = n(), avg = max(ASE))
+  summ <- currBoxplotData %>% group_by(group) %>% summarize(n = n(), avg = max(ASE))
   
   # Create ggplot
-  boxplotplot <- ggplot(currBoxplotData, aes(x = Group, y = ASE, fill = Group)) +
+  boxplotplot <- ggplot(currBoxplotData, aes(x = group, y = ASE, fill = group)) +
     geom_boxplot(alpha = 0.5) +
     labs(x = "Phenogroup", y = "ASE score", fill = "Phenogroup") +
     scale_fill_brewer(palette = "Dark2") +
     coord_fixed(ratio = 8) +
-    geom_text(data = summ, inherit.aes = FALSE, aes(x = Group, label = n, y = avg+0.05), size = 3) +
+    geom_text(data = summ, inherit.aes = FALSE, aes(x = group, label = n, y = avg+0.05), size = 3) +
     theme(
       legend.position = "right",
       legend.key = element_rect(fill = "transparent"),
       legend.title = element_text(size = 8),
       legend.text = element_text(size = 8),
-      axis.line = element_line(colour = "black", linewidth = 1),
+      axis.line = element_line(colour = "black", size = 1),
       panel.grid.major.y = element_blank(),
       panel.background = element_rect(fill = "white"),
       title = element_text(face = "bold"),
@@ -1154,7 +1155,7 @@ for (set in 1:ncol(combinations)) {
   
   # Volcano plot with effect size
   # Get annotation data necessary for volcano plot
-  volTest <- na.omit(as.data.frame(allClustCompEffectRes[[test]]))
+  volTest <- na.omit(as.data.frame(allGroupCompEffectRes[[test]]))
   colnames(volTest)[1] <- "effect"
   volTest$rsid <- rownames(volTest)
   annVoltest <- annData[annData$rsid %in% volTest$rsid,]
@@ -1176,7 +1177,7 @@ for (set in 1:ncol(combinations)) {
     geom_hline(yintercept = -log10(0.05), color = "grey40", linetype = "dashed") +
     geom_point(alpha = 0.75) +
     scale_color_manual(values = c("blue", "black","red")) +
-    labs(x = "Difference in median ASE scores of clusters 4 and 3", 
+    labs(x = "Difference in median ASE scores of groups 4 and 3", 
          y = "-log10(p)") +
     theme_minimal() + 
     theme(legend.position = "none") +
@@ -1193,7 +1194,7 @@ for (set in 1:ncol(combinations)) {
   setwd(RES.DIR)
 }
 
-# QTL and topGO enrichment for cluster analyses
+# QTL and topGO enrichment for group analyses
 for (set in 1:ncol(combinations)) {
   test <- paste0(combinations[1,set], "_versus_",combinations[2,set])
   if(!dir.exists(test)) { 
@@ -1202,10 +1203,10 @@ for (set in 1:ncol(combinations)) {
   setwd(test)
   
   setwd(paste0(test, "_results"))
-  restest <- na.omit(as.data.frame(allClustCompRes[[test]]))
+  restest <- na.omit(as.data.frame(allGroupCompRes[[test]]))
   colnames(restest)[1] <- "pvalue"
   restest$rsid <- rownames(restest)
-  # Do QTL enrichment for the current cluster comparison results
+  # Do QTL enrichment for the current group comparison results
   snps2genesPCurr <- full_join(snp2geneData,restest)
   
   snps2genesPCurr <- na.omit(snps2genesPCurr)
@@ -1213,14 +1214,14 @@ for (set in 1:ncol(combinations)) {
                  sqtl = gtexsqtl,
                  eqtl = gtexeqtl)
   
-  # GO enrichment between clusters
+  # GO enrichment between group
   ase.topGO(inputData = snps2genesPCurr,
             statvalue = "pvalue",
             filename = paste0("topGO_", test, ".xlsx"))
   
   setwd(RES.DIR)
 }
-
+                          
 #-----------------------------------------------------------------------------#
 # 9. Save stuff
 #-----------------------------------------------------------------------------#
